@@ -390,7 +390,7 @@ def load_data(data_df,
     for i, text in enumerate(texts_list):
         texts_list[i] = f' {sep_text_token_str} '.join(text)
     logger.info(f'Raw text example: {texts_list[0]}')
-    hf_model_text_input = tokenizer(texts_list, padding=True, truncation=True,
+    hf_model_text_input = tokenizer(texts_list, padding="max_length", truncation=True,
                                     max_length=max_token_length)
     tokenized_text_ex = ' '.join(tokenizer.convert_ids_to_tokens(hf_model_text_input['input_ids'][0]))
     logger.debug(f'Tokenized text example: {tokenized_text_ex}')

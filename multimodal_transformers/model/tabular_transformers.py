@@ -219,6 +219,12 @@ class RobertaWithTabular(RobertaForSequenceClassification):
         sequence_output = outputs[0]
         text_feats = sequence_output[:, 0, :]
         text_feats = self.dropout(text_feats)
+        print('Sequence Outputs Shape')
+        print(sequence_output.shape)
+        print('Text Feats Shape')
+        print(text_feats.shape)
+        print('Cat Feats Shape')
+        print(cat_feats.shape)
         combined_feats = self.tabular_combiner(text_feats,
                                                cat_feats,
                                                numerical_feats)
@@ -635,9 +641,11 @@ class LongformerWithTabular(LongformerForSequenceClassification):
             self.config.tabular_config = tabular_config.__dict__
 
         tabular_config.text_feat_dim = hf_model_config.hidden_size
+        tabular_config.hidden_dropout_prob = hf_model_config.hidden_dropout_prob
         self.tabular_combiner = TabularFeatCombiner(tabular_config)
         self.num_labels = tabular_config.num_labels
         combined_feat_dim = self.tabular_combiner.final_out_dim
+        self.dropout = nn.Dropout(hf_model_config.hidden_dropout_prob)
         if tabular_config.use_simple_classifier:
             self.tabular_classifier = nn.Linear(combined_feat_dim,
                                                 tabular_config.num_labels)
@@ -680,7 +688,7 @@ class LongformerWithTabular(LongformerForSequenceClassification):
             input_ids,
             attention_mask=attention_mask,
             global_attention_mask=global_attention_mask,
-            head_mask=head_mask,
+            # head_mask=head_mask,
             token_type_ids=token_type_ids,
             position_ids=position_ids,
             inputs_embeds=inputs_embeds,
@@ -689,7 +697,15 @@ class LongformerWithTabular(LongformerForSequenceClassification):
             return_dict=return_dict,
         )
         sequence_output = outputs[0]
-        combined_feats = self.tabular_combiner(sequence_output,
+        text_feats = sequence_output[:, 0, :]
+        text_feats = self.dropout(text_feats)
+        print('Sequence Outputs Shape')
+        print(sequence_output.shape)
+        print('Text Feats Shape')
+        print(text_feats.shape)
+        print('Cat Feats Shape')
+        print(cat_feats.shape)
+        combined_feats = self.tabular_combiner(text_feats,
                                                cat_feats,
                                                numerical_feats)
         loss, logits, classifier_layer_outputs = hf_loss_func(combined_feats,
