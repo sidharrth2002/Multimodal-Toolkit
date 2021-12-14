@@ -9,14 +9,14 @@ from transformers import (
     XLMForSequenceClassification,
     LongformerForSequenceClassification,
 )
-from transformers.modeling_bert import BERT_INPUTS_DOCSTRING
-from transformers.modeling_roberta import ROBERTA_INPUTS_DOCSTRING
-from transformers.modeling_distilbert import DISTILBERT_INPUTS_DOCSTRING
-from transformers.modeling_albert import ALBERT_INPUTS_DOCSTRING
-from transformers.modeling_xlnet import XLNET_INPUTS_DOCSTRING
-from transformers.modeling_xlm import XLM_INPUTS_DOCSTRING
-from transformers.modeling_longformer import LONGFORMER_INPUTS_DOCSTRING
-from transformers.configuration_xlm_roberta import XLMRobertaConfig
+from transformers.models.bert import BERT_INPUTS_DOCSTRING
+from transformers.models.roberta import ROBERTA_INPUTS_DOCSTRING
+from transformers.models.distilbert import DISTILBERT_INPUTS_DOCSTRING
+from transformers.models.albert import ALBERT_INPUTS_DOCSTRING
+from transformers.models.xlnet import XLNET_INPUTS_DOCSTRING
+from transformers.models.xlm import XLM_INPUTS_DOCSTRING
+from transformers.models.longformer import LONGFORMER_INPUTS_DOCSTRING
+from transformers.models.xlm_roberta import XLMRobertaConfig
 from transformers.file_utils import add_start_docstrings_to_callable
 
 from .tabular_combiner import TabularFeatCombiner
