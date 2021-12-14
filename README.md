@@ -1,3 +1,9 @@
+The original version released did not include the transformers I wanted. I'm currently adding new transformers to the package including:
+1. Longformer
+2. BigBird
+
+The original documentation is below.
+
 # Multimodal Transformers | Transformers with Tabular Data
 
 --------------------------------------------------------------------------------
