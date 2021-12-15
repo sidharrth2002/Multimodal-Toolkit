@@ -227,11 +227,26 @@ def load_train_val_test_helper(train_df,
     if categorical_encode_type == 'ohe' or categorical_encode_type == 'binary':
         dfs = [df for df in [train_df, val_df, test_df] if df is not None]
         data_df = pd.concat(dfs, axis=0)
+        print('Original df shape')
+        print(data_df.shape)
+        print(data_df.index)
+        print(data_df['explanation_practice'])
         cat_feat_processor = CategoricalFeatures(data_df, categorical_cols, categorical_encode_type)
         vals = cat_feat_processor.fit_transform()
         cat_df = pd.DataFrame(vals, columns=cat_feat_processor.feat_names)
+        print('Cat df shape')
+        print(cat_df.shape)
+        print(cat_df.index)
+        print(cat_df)
+        data_df.reset_index(drop=True, inplace=True)
         data_df = pd.concat([data_df, cat_df], axis=1)
+        print('Concatenated shape')
+        print(data_df.shape)
+        print(data_df.index)
+        print(data_df)
         categorical_cols = cat_feat_processor.feat_names
+        print('Cat columns')
+        print(categorical_cols)
 
         len_train = len(train_df)
         len_val = len(val_df) if val_df is not None else 0
@@ -386,6 +401,11 @@ def load_data(data_df,
     agg_func = partial(agg_text_columns_func, empty_text_values, replace_empty_text)
     texts_cols = get_matching_cols(data_df, text_cols_func)
     logger.info(f'Text columns: {texts_cols}')
+    print('Data df last time')
+    print(data_df.shape)
+    print(data_df.index)
+    print(data_df)
+    print(texts_cols)
     texts_list = data_df[texts_cols].agg(agg_func, axis=1).tolist()
     for i, text in enumerate(texts_list):
         texts_list[i] = f' {sep_text_token_str} '.join(text)
