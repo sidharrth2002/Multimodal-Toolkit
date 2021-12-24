@@ -258,6 +258,15 @@ class TabularFeatCombiner(nn.Module):
                                                            output_dim)))
                 self.bias_cat = nn.Parameter(torch.zeros(output_dim))
 
+            print('Cat feat dim')
+            print(self.cat_feat_dim)
+
+            print('Numerical feat dim')
+            print(self.numerical_feat_dim)
+
+            print('Output dim outside')
+            print(output_dim)
+
             if self.numerical_feat_dim > 0:
                 if self.numerical_feat_dim > self.text_out_dim:
                     output_dim_num = self.text_out_dim
@@ -275,6 +284,12 @@ class TabularFeatCombiner(nn.Module):
                         bn=True)
                 else:
                     output_dim_num = self.numerical_feat_dim
+
+                print('Output dim num')
+                print(output_dim_num)
+                print('Output dim')
+                print(output_dim)
+
                 self.weight_num = nn.Parameter(torch.rand((output_dim_num,
                                                             output_dim)))
                 self.bias_num = nn.Parameter(torch.zeros(output_dim))
