@@ -2,6 +2,10 @@ The original version released did not include the transformers I wanted. I'm cur
 1. Longformer
 2. BigBird
 
+To use this version of the package run:
+
+`pip install git+https://github.com/sidharrth2002/Multimodal-Toolkit`
+
 The original documentation is below.
 
 # Multimodal Transformers | Transformers with Tabular Data
