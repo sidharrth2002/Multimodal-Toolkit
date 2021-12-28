@@ -98,6 +98,7 @@ class TabularFeatCombiner(nn.Module):
         self.mlp_dropout = tabular_config.mlp_dropout
         self.mlp_division = tabular_config.mlp_division
         self.text_out_dim = tabular_config.text_feat_dim
+        self.keyword_attention_dim = tabular_config.keyword_attention_dim
         self.tabular_config = tabular_config
 
         if self.numerical_bn and self.numerical_feat_dim > 0:
@@ -151,7 +152,18 @@ class TabularFeatCombiner(nn.Module):
                 return_layer_outs=False,
                 bn=True
             )
-            self.final_out_dim = self.text_out_dim + output_dim
+            if self.keyword_attention_dim is not None and self.keyword_attention_dim > 0:
+                output_dim_num = self.keyword_attention_dim // (self.mlp_division // 2)
+                self.keyword_MLP = MLP(
+                    self.keyword_attention_dim,
+                    output_dim_num,
+                    act=self.mlp_act,
+                    dropout_prob=self.mlp_dropout,
+                    num_hidden_lyr=1,
+                    return_layer_outs=False,
+                    bn=True
+                )
+            self.final_out_dim = self.text_out_dim + output_dim + self.keyword_attention_dim
         elif self.combine_feat_method == 'individual_mlps_on_cat_and_numerical_feats_then_concat':
             output_dim_cat = 0
             if self.cat_feat_dim > 0:
@@ -350,7 +362,7 @@ class TabularFeatCombiner(nn.Module):
             raise ValueError(f'combine_feat_method {self.combine_feat_method} '
                              f'not implemented')
 
-    def forward(self, text_feats, cat_feats=None, numerical_feats=None):
+    def forward(self, text_feats, cat_feats=None, numerical_feats=None, keyword_feats=None):
         """
         Args:
             text_feats (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, text_out_dim)`):
@@ -383,7 +395,13 @@ class TabularFeatCombiner(nn.Module):
         elif self.combine_feat_method == 'mlp_on_concatenated_cat_and_numerical_feats_then_concat':
             tabular_feats = torch.cat((cat_feats, numerical_feats), dim=1)
             tabular_feats = self.cat_and_numerical_mlp(tabular_feats)
-            combined_feats = torch.cat((text_feats, tabular_feats), dim=1)
+            if keyword_feats is not None:
+                keyword_feats = self.keyword_MLP(keyword_feats)
+                print('Keyword Feats Shape')
+                print(keyword_feats.shape)
+                combined_feats = torch.cat((text_feats, tabular_feats, keyword_feats), dim=1)
+            else:
+                combined_feats = torch.cat((text_feats, tabular_feats), dim=1)
         elif self.combine_feat_method == 'individual_mlps_on_cat_and_numerical_feats_then_concat':
             if cat_feats.shape[1] != 0:
                 cat_feats = self.cat_mlp(cat_feats)
