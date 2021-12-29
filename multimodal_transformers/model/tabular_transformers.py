@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.utils.data.dataset import T
 from transformers import (
     BertForSequenceClassification,
     RobertaForSequenceClassification,
@@ -18,6 +19,8 @@ from transformers.models.xlm.modeling_xlm import XLM_INPUTS_DOCSTRING
 from transformers.models.longformer.modeling_longformer import LONGFORMER_INPUTS_DOCSTRING
 from transformers.models.xlm_roberta.modeling_xlm_roberta import XLMRobertaConfig
 from transformers.file_utils import add_start_docstrings
+
+from multimodal_transformers.model.layers import KeyAttention, LambdaLayer
 
 from .tabular_combiner import TabularFeatCombiner
 from .tabular_config import TabularConfig
@@ -632,7 +635,7 @@ class LongformerWithTabular(LongformerForSequenceClassification):
     """
     Longformer Model With Sequence Classification Head
     """
-    def __init__(self, hf_model_config):
+    def __init__(self, hf_model_config, embedding_weights=None):
         super().__init__(hf_model_config)
         tabular_config = hf_model_config.tabular_config
         if type(tabular_config) is dict:  # when loading from saved model
@@ -660,6 +663,10 @@ class LongformerWithTabular(LongformerForSequenceClassification):
                                           hidden_channels=dims,
                                           bn=True)
 
+        # load embeddings
+        self.embedding_layer = nn.Embedding.from_pretrained(torch.from_numpy(embedding_weights).float(), freeze=True)
+        # self.embedding_layer = nn.Embedding()
+
     @add_start_docstrings(LONGFORMER_INPUTS_DOCSTRING.format("(batch_size, sequence_length)"))
     def forward(
         self,
@@ -676,7 +683,11 @@ class LongformerWithTabular(LongformerForSequenceClassification):
         return_dict=None,
         class_weights=None,
         cat_feats=None,
-        numerical_feats=None
+        numerical_feats=None,
+        answer_tokens=None,
+        key_tokens=None,
+        answer_mask=None,
+        key_mask=None
     ):
         if global_attention_mask is None:
             print("Initializing global attention on CLS token...")
@@ -699,15 +710,47 @@ class LongformerWithTabular(LongformerForSequenceClassification):
         sequence_output = outputs[0]
         text_feats = sequence_output[:, 0, :]
         text_feats = self.dropout(text_feats)
-        print('Sequence Outputs Shape')
-        print(sequence_output.shape)
-        print('Text Feats Shape')
-        print(text_feats.shape)
-        print('Cat Feats Shape')
-        print(cat_feats.shape)
+        # print('Sequence Outputs Shape')
+        # print(sequence_output.shape)
+        # print('Text Feats Shape')
+        # print(text_feats.shape)
+        # print('Cat Feats Shape')
+        # print(cat_feats.shape)
         combined_feats = self.tabular_combiner(text_feats,
                                                cat_feats,
-                                               numerical_feats)
+                                               numerical_feats,
+                                               keyword_feats)
+
+        ans_emb = self.embedding_layer(answer_tokens)
+        ans_mask_emb = self.embedding_layer(answer_mask)
+        keys_emb = self.embedding_layer(key_tokens)
+        keys_mask_emb = self.embedding_layer(key_mask)
+
+        att_layer = KeyAttention(
+            name='attention',
+            op='dot',
+            seed=0,
+            emb_dim=300,
+            word_att_pool='mean',
+            merge_ans_key='concat',
+            beta=False
+        )
+
+        for i in range(key_num):
+            t_k = LambdaLayer(lambda x: x[:, i], name='key_%d' % i)(keys_emb)
+            t_k_m = LambdaLayer(lambda x: x[:, i], name='ans_%d' % i)(key_masks)
+
+            f, *att_rtn = att_layer([ans_emb, ans_mask, t_k, t_k_m])
+
+            fea_att_list.append(f)
+
+        for i_a_r, a_r in enumerate(att_rtn):
+            attentions[att_rtn_keys[i_a_r]].append(a_r)
+
+        # do something with this- represents keyword attention
+        fea_rubric = torch.cat(fea_att_list)
+
+
         loss, logits, classifier_layer_outputs = hf_loss_func(combined_feats,
                                                               self.tabular_classifier,
                                                               labels,

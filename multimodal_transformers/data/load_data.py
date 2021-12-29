@@ -17,6 +17,9 @@ from .data_utils import (
     normalize_numerical_feats,
 )
 
+from torchtext.data import get_tokenizer
+import torch
+
 logger = logging.getLogger(__name__)
 
 
@@ -136,6 +139,9 @@ def load_data_from_folder(folder_path,
                           replace_empty_text=None,
                           max_token_length=None,
                           debug=False,
+                          glove_tokenizer=None,
+                          keywords=None,
+                          max_keyword_length=20
                           ):
     """
     Function to load tabular and text data from a specified folder
@@ -205,7 +211,8 @@ def load_data_from_folder(folder_path,
                                       empty_text_values,
                                       replace_empty_text,
                                       max_token_length,
-                                      debug)
+                                      debug, glove_tokenizer=glove_tokenizer, keywords=keywords,
+                                      max_keyword_length=max_keyword_length)
 
 
 def load_train_val_test_helper(train_df,
@@ -223,7 +230,10 @@ def load_train_val_test_helper(train_df,
                                empty_text_values=None,
                                replace_empty_text=None,
                                max_token_length=None,
-                               debug=False):
+                               debug=False,
+                               glove_tokenizer=None,
+                               keywords=None,
+                               max_keyword_length=20):
     if categorical_encode_type == 'ohe' or categorical_encode_type == 'binary':
         dfs = [df for df in [train_df, val_df, test_df] if df is not None]
         data_df = pd.concat(dfs, axis=0)
@@ -287,7 +297,9 @@ def load_train_val_test_helper(train_df,
                               empty_text_values,
                               replace_empty_text,
                               max_token_length,
-                              debug
+                              debug, glove_tokenizer=glove_tokenizer,
+                              keywords=keywords,
+                              max_keyword_length=max_keyword_length
                               )
     test_dataset = load_data(test_df,
                              text_cols,
@@ -302,7 +314,9 @@ def load_train_val_test_helper(train_df,
                              empty_text_values,
                              replace_empty_text,
                              max_token_length,
-                             debug
+                             debug, glove_tokenizer=glove_tokenizer,
+                             keywords=keywords,
+                             max_keyword_length=max_keyword_length
                              )
 
     if val_df is not None:
@@ -319,7 +333,9 @@ def load_train_val_test_helper(train_df,
                                 empty_text_values,
                                 replace_empty_text,
                                 max_token_length,
-                                debug
+                                debug, glove_tokenizer=glove_tokenizer,
+                                keywords=keywords,
+                                max_keyword_length=max_keyword_length
                                 )
     else:
         val_dataset = None
@@ -340,7 +356,9 @@ def load_data(data_df,
               empty_text_values=None,
               replace_empty_text=None,
               max_token_length=None,
-              debug=False,
+              debug=False, glove_tokenizer=None,
+              keywords=None,
+              max_keyword_length=20
               ):
     """Function to load a single dataset given a pandas DataFrame
 
@@ -380,6 +398,8 @@ def load_data(data_df,
         max_token_length (int, optional): The token length to pad or truncate to on the
             input text
         debug (bool, optional): Whether or not to load a smaller debug version of the dataset
+        glove_tokenizer (:obj, optional): The original tokenizer is provided by huggingface, this is any tokenizer
+        object provided by torchtext to prepare the tokens for the glove embedding layer
 
     Returns:
         :obj:`tabular_torch_dataset.TorchTextDataset`: The converted dataset
@@ -416,5 +436,15 @@ def load_data(data_df,
     logger.debug(f'Tokenized text example: {tokenized_text_ex}')
     labels = data_df[label_col].values
 
+    answer_tokens = glove_tokenizer(texts_list)
+    # create mask
+    answer_mask = torch.zeros(answer_tokens.shape, dtype=torch.long)
+    answer_mask = answer_mask.masked_fill_(answer_tokens != 0, 1)
+
+    keyword_tokens = torch.tensor(glove_tokenizer(keywords))
+    keyword_tokens = torch.reshape(keyword_tokens, (len(keywords), max_keyword_length))
+    keyword_mask = torch.zeros(keyword_tokens.shape, dtype=torch.long)
+    keyword_mask = keyword_mask.masked_fill_(keyword_tokens != 0, 1)
+
     return TorchTabularTextDataset(hf_model_text_input, categorical_feats,
-                                   numerical_feats, labels, data_df, label_list)
+                                   numerical_feats, answer_tokens, answer_mask, keyword_tokens, keyword_mask, labels, data_df, label_list)

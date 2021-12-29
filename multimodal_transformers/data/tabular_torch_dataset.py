@@ -30,6 +30,10 @@ class TorchTabularTextDataset(TorchDataset):
                  encodings,
                  categorical_feats,
                  numerical_feats,
+                 answer_tokens=None,
+                 answer_mask=None,
+                 keyword_tokens=None,
+                 keyword_mask=None,
                  labels=None,
                  df=None,
                  label_list=None,
@@ -39,6 +43,10 @@ class TorchTabularTextDataset(TorchDataset):
         self.encodings = encodings
         self.cat_feats = categorical_feats
         self.numerical_feats = numerical_feats
+        self.answer_tokens = answer_tokens,
+        self.answer_mask = answer_mask
+        self.keyword_tokens = keyword_tokens
+        self.keyword_mask = keyword_mask
         self.labels = labels
         self.class_weights = class_weights
         self.label_list = label_list if label_list is not None else [i for i in range(len(np.unique(labels)))]
@@ -51,6 +59,10 @@ class TorchTabularTextDataset(TorchDataset):
             if self.cat_feats is not None else torch.zeros(0)
         item['numerical_feats'] = torch.tensor(self.numerical_feats[idx]).float()\
             if self.numerical_feats is not None else torch.zeros(0)
+        item['answer_tokens'] = torch.tensor(self.answer_tokens[idx])
+        item['answer_mask'] = torch.tensor(self.answer_mask[idx])
+        item['keyword_tokens'] = torch.tensor(self.keyword_tokens[idx])
+        item['keyword_mask'] = torch.tensor(self.keyword_mask[idx])
         return item
 
     def __len__(self):
